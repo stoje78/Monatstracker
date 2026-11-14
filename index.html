@@ -1,0 +1,885 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#8c2a5a"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>Monatstracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one narrow column app, sticky tab bar, form sections stacked as quiet panels */
+:root{
+  --bg:#f4f3f7; --panel:#ffffff; --ink:#221d2b; --muted:#6b6478; --line:#e2dfe8;
+  --accent:#8c2a5a; --accent-soft:#f6e6ee; --accent-ink:#ffffff;
+  --temp:#2f5d8a; --temp-soft:#e4edf6; --ok:#2c7a4b; --warn:#a4462b; --blood:#c62828; --nodata:transparent; --hasdata:#e9e6ee; --invalid:#d7d3de;
+  --s-kopf:#7b3fbf; --s-brust:#d9a400; --s-wasser:#2f6fd0; --s-ersch:#2e8b4e; --s-wut:#e0407f;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Manrope", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17141c; --panel:#211d28; --ink:#ece8f2; --muted:#a39cb0; --line:#353042;
+  --accent:#e07aa9; --accent-soft:#3a2231; --accent-ink:#1b1220;
+  --temp:#8bb6e0; --temp-soft:#1f2c3a; --ok:#6ccf93; --warn:#f09a7c; --blood:#ef5350; --hasdata:#332d3d; --invalid:#2a2531; --s-kopf:#b38be8; --s-brust:#f2cc4a; --s-wasser:#7fb0f0; --s-ersch:#6fcf93; --s-wut:#f27aac; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17141c; --panel:#211d28; --ink:#ece8f2; --muted:#a39cb0; --line:#353042;
+  --accent:#e07aa9; --accent-soft:#3a2231; --accent-ink:#1b1220;
+  --temp:#8bb6e0; --temp-soft:#1f2c3a; --ok:#6ccf93; --warn:#f09a7c; --blood:#ef5350; --hasdata:#332d3d; --invalid:#2a2531; --s-kopf:#b38be8; --s-brust:#f2cc4a; --s-wasser:#7fb0f0; --s-ersch:#6fcf93; --s-wut:#f27aac; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:860px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:1.9rem;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:600;font-size:1.15rem;margin:0;text-wrap:balance}
+.status{font-size:.8rem;color:var(--muted)}
+.status.warn{color:var(--warn)}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;padding-block:12px;margin-top:8px;border-bottom:1px solid var(--line)}
+nav.tabs button{flex:1;font:600 .95rem var(--body);padding:10px 8px;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+[hidden]{display:none!important}
+section.view{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;min-width:0}
+.label{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.field{display:grid;gap:4px;flex:1 1 120px;min-width:0}
+.field label{font-size:.82rem;color:var(--muted);font-weight:600}
+input,textarea,select{font:500 1rem var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;font-variant-numeric:tabular-nums}
+textarea{min-height:76px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.datebig{font-family:var(--display);font-size:1.3rem;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .9rem var(--body);font-variant-numeric:tabular-nums;padding:8px 11px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;min-width:44px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.temps{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+.temps .chip{border-radius:8px;padding:9px 0;min-width:0}
+.temps .chip[aria-pressed="true"]{background:var(--temp);border-color:var(--temp);color:var(--panel)}
+.scale{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+.scale .chip{border-radius:8px;padding:8px 0;min-width:0;background:color-mix(in srgb,#000 calc(var(--lvl,0)*10%),#8e8e94);border-color:color-mix(in srgb,#000 calc(var(--lvl,0)*10%),#74747c);color:#000}
+.scale .chip.darkchip{color:#fff}
+.scale .chip[aria-pressed="true"]{background:color-mix(in srgb,#000 calc(var(--lvl,0)*10%),#8e8e94);border-color:var(--accent);color:#000;box-shadow:0 0 0 2px var(--panel),0 0 0 5px var(--accent);font-weight:800}
+.scale .chip.darkchip[aria-pressed="true"]{color:#fff}
+.panel.bleed{background:color-mix(in srgb,var(--blood) 7%,var(--panel));border-color:color-mix(in srgb,var(--blood) 35%,var(--line))}
+.panel.bleed .label{color:var(--blood);text-align:center}
+.panel.bleed .chips{justify-content:center;gap:10px}
+.panel.bleed .chip{font-size:1.1rem;font-weight:700;padding:12px 20px;min-width:96px}
+.panel.bleed .chip{border-color:color-mix(in srgb,var(--blood) 40%,var(--line));background:color-mix(in srgb,var(--blood) 6%,var(--bg))}
+.panel.bleed .chip[aria-pressed="true"]{background:var(--blood);border-color:var(--blood);color:#fff}
+.panel.pain .label{color:var(--ink)}
+.panel.sym .label{text-align:center}
+#symChips{justify-content:center;gap:10px}
+#symChips .chip{font-size:1.1rem;font-weight:700;padding:12px 20px;min-width:96px;border-color:var(--sc);background:color-mix(in srgb,var(--sc) 14%,var(--bg))}
+.panel:has(#symChips) > .label{text-align:center}
+#symChips .chip.locked{opacity:.4}
+#symChips .chip::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--sc);margin-right:6px;vertical-align:1px}
+#symChips .chip[aria-pressed="true"]{background:var(--sc);border-color:var(--sc);color:#fff}
+#symChips .chip[aria-pressed="true"]::before{background:#fff}
+#symChips .chip.lightsym[aria-pressed="true"]{color:#2a2100}
+#symChips .chip.lightsym[aria-pressed="true"]::before{background:#2a2100}
+.hint{font-size:.82rem;color:var(--muted)}
+.btn{font:700 .95rem var(--body);padding:11px 18px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--warn)}
+.btn.small{padding:6px 11px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:default}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.toast{font-size:.9rem;font-weight:600;color:var(--ok)}
+.toast.err{color:var(--warn)}
+.notice{background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:.88rem}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:14px}
+fieldset:disabled{opacity:.45}
+.list{display:grid;gap:8px}
+.entry{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.entry .d{font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.entry .d small{display:block;font-family:var(--body);font-weight:500;color:var(--muted);font-size:.78rem}
+.entry .vals{font-size:.86rem;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.entry .vals b{color:var(--ink);font-weight:600}
+.pill{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--temp-soft);color:var(--temp)}
+.empty{text-align:center;color:var(--muted);padding:28px 10px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:.86rem;font-variant-numeric:tabular-nums;background:var(--panel)}
+th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--bg)}
+td.sym{white-space:normal;min-width:160px}
+tr.missing td{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat .v{font-family:var(--display);font-size:1.25rem;font-weight:600;font-variant-numeric:tabular-nums}
+.chart svg{width:100%;height:auto;display:block}
+.yearbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.yearbar .yr{font-family:var(--display);font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums;min-width:4ch;text-align:center}
+table.year{width:auto;font-size:.75rem}
+table.year th,table.year td{padding:0;border:1px solid var(--line);text-align:center;white-space:nowrap}
+table.year thead th{padding:4px 0;min-width:32px;letter-spacing:0;text-transform:none;font-size:.7rem}
+table.year th.m{text-align:left;padding:0 10px;min-width:92px;font-size:.78rem;text-transform:none;letter-spacing:0;color:var(--ink);background:var(--panel);position:sticky;left:0;z-index:1}
+table.year td.c{width:32px;min-width:32px;height:64px;padding:2px;vertical-align:top;cursor:pointer}
+table.year td.c.has{background:var(--hasdata)}
+.cb{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:16px 16px 11px 11px;gap:2px}
+.cb i{display:block;border-radius:2px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 18%,transparent)}
+.cb i.w{grid-column:1/-1}
+.legend .grad{display:inline-flex;vertical-align:-2px;margin-right:5px}
+.legend .grad i{margin:0;border-radius:0;border:0}
+table.year td.c.today{outline:2px solid var(--temp);outline-offset:-2px}
+table.year th.m small{font-weight:500;color:var(--muted)}
+table.year td.sum{padding:0 8px;font-weight:700;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--line);vertical-align:-2px;margin-right:5px}
+@media (max-width:520px){nav.tabs button{font-size:.82rem;padding:9px 4px}.temps{grid-template-columns:repeat(4,1fr)}.scale{grid-template-columns:repeat(6,1fr)}.entry{grid-template-columns:1fr auto}.entry .vals{grid-column:1/-1;grid-row:2}}
+@media (prefers-reduced-motion:no-preference){.chip,.btn,nav.tabs button{transition:background .15s,color .15s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Monatstracker</h1>
+    <span id="status" class="status">Verbinde mit Speicher …</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button id="tab-erfassen" role="tab" aria-selected="true" data-view="erfassen">Erfassen</button>
+    <button id="tab-eintraege" role="tab" aria-selected="false" data-view="eintraege">Einträge</button>
+    <button id="tab-report" role="tab" aria-selected="false" data-view="report">Report</button>
+    <button id="tab-jahr" role="tab" aria-selected="false" data-view="jahr">Jahresreport</button>
+  </nav>
+
+  <!-- ERFASSEN -->
+  <section class="view" id="view-erfassen">
+    <form id="form" novalidate>
+      <div style="display:grid;gap:14px">
+        <div class="panel">
+          <span class="label" id="formTitle">1 · Datum wählen</span>
+          <div class="row">
+            <div class="field" style="flex:2 1 200px">
+              <label for="f-datum">Datum</label>
+              <input id="f-datum" type="date" class="datebig" required>
+            </div>
+          </div>
+          <div id="existsNote" class="notice" hidden></div>
+        </div>
+
+        <fieldset id="fields" disabled>
+          <div class="panel">
+            <span class="label">Zyklus</span>
+            <div class="row">
+              <div class="field"><label for="f-zyklusnr">Zyklusnr.</label><input id="f-zyklusnr" inputmode="numeric" placeholder="z. B. 3"></div>
+              <div class="field"><label for="f-zyklustag">Tag (Zyklustag)</label><input id="f-zyklustag" inputmode="numeric" placeholder="1–42"></div>
+              <button type="button" class="btn small" id="newCycle">Neuer Zyklus · Tag 1</button>
+            </div>
+            <span class="hint" id="cycleHint"></span>
+          </div>
+
+          <div class="panel">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <span class="label">Temperatur °C</span>
+              <span class="pill" id="tempShow">–</span>
+            </div>
+            <div class="temps" id="temps"></div>
+            <div class="row">
+              <div class="field" style="max-width:220px"><label for="f-temp">oder genau eingeben</label><input id="f-temp" inputmode="decimal" placeholder="36,45"></div>
+            </div>
+          </div>
+
+          <div class="panel bleed">
+            <span class="label">Blutung</span>
+            <div class="chips" id="blutung"></div>
+          </div>
+
+          <div class="panel pain">
+            <span class="label">Schmerzen <span style="text-transform:none;letter-spacing:0;font-weight:500">(0 = keine, 10 = sehr stark)</span></span>
+            <div class="scale" id="schmerzen"></div>
+          </div>
+
+          <div class="panel">
+            <span class="label">Kreislauf &amp; Gewicht</span>
+            <div class="row">
+              <div class="field"><label for="f-sys">Blutdruck systolisch</label><input id="f-sys" inputmode="numeric" placeholder="120"></div>
+              <div class="field"><label for="f-dia">diastolisch</label><input id="f-dia" inputmode="numeric" placeholder="80"></div>
+              <div class="field"><label for="f-puls">Puls /min</label><input id="f-puls" inputmode="numeric" placeholder="68"></div>
+              <div class="field"><label for="f-gewicht">Gewicht kg</label><input id="f-gewicht" inputmode="decimal" placeholder="62,4"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <span class="label">Symptome</span>
+            <div class="chips" id="symChips"></div>
+            <span class="hint" id="symHint" role="status" style="text-align:center;color:var(--warn)"></span>
+            <textarea id="f-symptome" placeholder="Antippen oder frei eintragen, z. B. Übelkeit"></textarea>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn primary" id="saveBtn">Speichern</button>
+            <button type="button" class="btn" id="resetBtn">Leeren</button>
+            <span id="toast" class="toast" role="status"></span>
+          </div>
+        </fieldset>
+      </div>
+    </form>
+  </section>
+
+  <!-- EINTRÄGE -->
+  <section class="view" id="view-eintraege" hidden>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 id="countTitle">Einträge</h2>
+      <div class="field" style="max-width:200px;flex:0 1 200px"><label for="filterMonth">Monat</label><input id="filterMonth" type="month"></div>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="panel" id="ghPanel" hidden>
+      <span class="label">Online-Speicher (GitHub)</span>
+      <span class="hint" id="ghState"></span>
+      <div class="row">
+        <div class="field" style="flex:1 1 220px"><label for="gh-repo">Repository für die Daten</label><input id="gh-repo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="benutzername/monatstracker-daten"></div>
+        <div class="field" style="flex:1 1 220px"><label for="gh-token">Zugangsschlüssel (Token)</label><input id="gh-token" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn small primary" id="ghConnect">Verbinden</button>
+        <button type="button" class="btn small" id="ghSyncBtn" hidden>Jetzt abgleichen</button>
+        <button type="button" class="btn small" id="ghCode" hidden>Verbindungscode kopieren</button>
+        <button type="button" class="btn small danger" id="ghOff" hidden>Trennen</button>
+      </div>
+      <span id="ghToast" class="toast" role="status"></span>
+    </div>
+    <div class="panel">
+      <span class="label">Datensicherung</span>
+      <span class="hint">Sicherung aller Einträge als Text. Damit lassen sich die Daten auf ein anderes Gerät übertragen oder nach einem Datenverlust wiederherstellen.</span>
+      <div class="actions">
+        <button type="button" class="btn small" id="bkCopy">Sicherung kopieren</button>
+        <button type="button" class="btn small" id="bkFile">Sicherung als Datei</button>
+        <span id="bkToast" class="toast" role="status"></span>
+      </div>
+      <textarea id="bkText" placeholder="Zum Wiederherstellen: Sicherungstext hier einfügen"></textarea>
+      <div class="actions"><button type="button" class="btn small" id="bkImport">Sicherung einspielen</button></div>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section class="view" id="view-report" hidden>
+    <div class="panel">
+      <span class="label">Zeitraum</span>
+      <div class="row">
+        <div class="field"><label for="r-von">von</label><input id="r-von" type="date"></div>
+        <div class="field"><label for="r-bis">bis</label><input id="r-bis" type="date"></div>
+      </div>
+      <div class="chips">
+        <button type="button" class="chip" data-preset="1-10">1.–10.</button>
+        <button type="button" class="chip" data-preset="11-20">11.–20.</button>
+        <button type="button" class="chip" data-preset="21-end">21.–Monatsende</button>
+        <button type="button" class="chip" data-preset="month">ganzer Monat</button>
+        <button type="button" class="chip" data-preset="prev">Vormonat</button>
+      </div>
+      <span class="hint">Die Kurzwahl bezieht sich auf den Monat des „von“-Datums.</span>
+    </div>
+    <div id="report"></div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="dlHtml">Report zum Drucken herunterladen</button>
+      <button type="button" class="btn" id="dlCsv">Als CSV (Excel)</button>
+      <span id="dlToast" class="toast" role="status"></span>
+    </div>
+    <span class="hint">Die heruntergeladene Datei im Browser öffnen und dort „Drucken“ wählen (Querformat).</span>
+  </section>
+
+  <!-- JAHRESREPORT -->
+  <section class="view" id="view-jahr" hidden>
+    <div class="panel">
+      <div class="yearbar">
+        <button type="button" class="btn small" id="yPrev" aria-label="Vorjahr">‹</button>
+        <span class="yr" id="yLabel"></span>
+        <button type="button" class="btn small" id="yNext" aria-label="Folgejahr">›</button>
+        <span class="hint" id="ySummary"></span>
+      </div>
+      <div class="legend" id="yLegend"></div>
+      <span class="hint">Jedes Kästchen ist ein Zyklustag: oben Blutung, darunter Schmerzen, unten die bis zu 4 gewählten Symptome. Zeilen = gespeicherte Zyklen, Spalten = Zyklustage.</span>
+    </div>
+    <div class="tablewrap" id="yearGrid"></div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="dlYear">Jahresreport zum Drucken herunterladen</button>
+      <span id="yToast" class="toast" role="status"></span>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const BLUTUNG = ["keine","Schmier","schwach","mittel","stark"];
+const TEMPS = Array.from({length:16},(_,i)=> +(35.5+i*0.1).toFixed(1));
+
+// ---------- date helpers (UTC-based to avoid DST issues) ----------
+const toD = s => { const [y,m,d]=s.split("-").map(Number); return new Date(Date.UTC(y,m-1,d)); };
+const toS = d => d.toISOString().slice(0,10);
+const addDays = (s,n) => { const d=toD(s); d.setUTCDate(d.getUTCDate()+n); return toS(d); };
+const diffDays = (a,b) => Math.round((toD(b)-toD(a))/86400000);
+const today = () => { const n=new Date(); return toS(new Date(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate()))); };
+const fmtDate = s => { const d=toD(s); return WD[d.getUTCDay()]+", "+s.slice(8,10)+"."+s.slice(5,7)+"."+s.slice(0,4); };
+const fmtShort = s => s.slice(8,10)+"."+s.slice(5,7)+".";
+const lastOfMonth = s => { const d=toD(s.slice(0,8)+"01"); d.setUTCMonth(d.getUTCMonth()+1); d.setUTCDate(0); return toS(d); };
+const num = v => { if(v==null) return null; const t=String(v).trim().replace(",","."); if(t==="") return null; const n=Number(t); return isFinite(n)?n:NaN; };
+const de = (n,dig=1) => n==null||n==="" ? "" : Number(n).toLocaleString("de-DE",{minimumFractionDigits:dig,maximumFractionDigits:dig});
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- storage ----------
+let entries = {};          // datum -> data
+let store = null;          // {save(id,data), remove(id)}
+let editingOriginal = null;
+
+const STANDALONE = !(window.claude && typeof window.claude.use==="function");
+// Download: in Claude über die Download-Funktion, sonst direkt über den Browser
+async function getDl(){
+  if(!STANDALONE){ try{ return await claude.use("downloads"); }catch(e){ return null; } }
+  return { async save({filename,data}){
+    const type = filename.endsWith(".html")?"text/html":filename.endsWith(".csv")?"text/csv":"application/json";
+    const url=URL.createObjectURL(new Blob([data],{type:type+";charset=utf-8"}));
+    if(filename.endsWith(".html")){ const w=window.open(url,"_blank"); if(w) return {status:"delivered"}; }
+    const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000); return {status:"saved"}; } };
+}
+function setStatus(t,warn){ const s=$("status"); s.textContent=t; s.classList.toggle("warn",!!warn); }
+
+const LS_KEY="monatstracker.v1", DEL_KEY="monatstracker.del", GH_KEY="monatstracker.gh", GH_FILE="monatstracker-daten.json";
+let dels={};               // datum -> Zeitpunkt der Löschung (für den Online-Abgleich)
+const lsGet=(k,f)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?f:v; }catch(e){ return f; } };
+const lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+function persistLocal(){ lsSet(LS_KEY,entries); lsSet(DEL_KEY,dels); }
+function localStore(){
+  entries=lsGet(LS_KEY,{}); dels=lsGet(DEL_KEY,{});
+  return { async save(id,data){ entries[id]=data; delete dels[id]; persistLocal(); renderAll(); ghSchedule(); },
+           async remove(id){ delete entries[id]; dels[id]=new Date().toISOString(); persistLocal(); renderAll(); ghSchedule(); } };
+}
+
+// ---------- Online-Speicher: Abgleich mit einem privaten GitHub-Repository ----------
+let gh=null, ghTimer=null, ghBusy=false, ghAgain=false, ghLast=0;
+const b64enc=s=>{ const b=new TextEncoder().encode(s); let o=""; for(let i=0;i<b.length;i+=0x8000) o+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(o); };
+const b64dec=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+function ghApi(path,opt={}){
+  return fetch("https://api.github.com/repos/"+gh.repo+path,{cache:"no-store",...opt,
+    headers:{Authorization:"Bearer "+gh.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.body?{"Content-Type":"application/json"}:{})}});
+}
+const ghErr=r=> r.status===401?"Zugangsschlüssel ungültig oder abgelaufen" : r.status===403?"Zugriff verweigert – Berechtigung des Schlüssels prüfen" : r.status===404?"Repository nicht gefunden oder Schlüssel hat keinen Zugriff" : "GitHub meldet Fehler "+r.status;
+async function ghPull(){
+  const r=await ghApi("/contents/"+GH_FILE);
+  if(r.status===404) return {sha:null,data:{e:{},d:{}}};
+  if(!r.ok) throw new Error(ghErr(r));
+  const j=await r.json(); let txt;
+  if(j.content) txt=b64dec(j.content);
+  else { const r2=await ghApi("/git/blobs/"+j.sha); if(!r2.ok) throw new Error(ghErr(r2)); txt=b64dec((await r2.json()).content); }
+  let p={}; try{ p=JSON.parse(txt||"{}"); }catch(e){ throw new Error("Datendatei bei GitHub ist beschädigt"); }
+  return {sha:j.sha,data:{e:p.eintraege||{},d:p.geloescht||{}}};
+}
+async function ghPush(data,sha){
+  const body={message:"Monatstracker: Abgleich "+new Date().toISOString().slice(0,16).replace("T"," "),
+    content:b64enc(JSON.stringify({app:"monatstracker",version:1,stand:new Date().toISOString(),eintraege:data.e,geloescht:data.d},null,1))};
+  if(sha) body.sha=sha;
+  const r=await ghApi("/contents/"+GH_FILE,{method:"PUT",body:JSON.stringify(body)});
+  if(r.status===409||r.status===422) return false;   // jemand anderes hat inzwischen gespeichert
+  if(!r.ok) throw new Error(ghErr(r));
+  return true;
+}
+// pro Tag gewinnt der zuletzt geänderte Stand (Eintrag oder Löschung)
+function mergeData(a,b){
+  const e={}, d={};
+  new Set([...Object.keys(a.e),...Object.keys(b.e),...Object.keys(a.d),...Object.keys(b.d)]).forEach(k=>{
+    const x=a.e[k], y=b.e[k];
+    const best = x&&y ? ((y.geaendert||"")>(x.geaendert||"")?y:x) : (x||y);
+    const t = [a.d[k],b.d[k]].filter(Boolean).sort().pop();
+    if(t && (!best || t>=(best.geaendert||""))) d[k]=t; else if(best) e[k]=best;
+  });
+  return {e,d};
+}
+const canon=x=>JSON.stringify([Object.keys(x.e).sort().map(k=>[k,x.e[k]]),Object.keys(x.d).sort().map(k=>[k,x.d[k]])]);
+async function ghSync(){
+  if(!gh) return;
+  if(ghBusy){ ghAgain=true; return; }
+  ghBusy=true; setStatus("Gleiche mit Online-Speicher ab …");
+  try{
+    let done=false;
+    for(let i=0;i<4 && !done;i++){
+      const rem=await ghPull();
+      const m=mergeData({e:entries,d:dels},rem.data);
+      entries=m.e; dels=m.d; persistLocal(); renderAll();
+      done = canon(m)===canon(rem.data) || await ghPush(m,rem.sha);
+    }
+    if(!done) throw new Error("mehrere Geräte speichern gleichzeitig – bitte gleich noch einmal abgleichen");
+    ghLast=Date.now();
+    setStatus("Online gespeichert · abgeglichen um "+new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+" Uhr");
+  }catch(e){
+    const off = navigator.onLine===false || e instanceof TypeError;
+    setStatus(off?"Keine Verbindung – auf dem Gerät gespeichert, Abgleich folgt":"Abgleich fehlgeschlagen: "+(e&&e.message||"Fehler"),true);
+  }finally{ ghBusy=false; if(ghAgain){ ghAgain=false; ghSchedule(); } }
+}
+function ghSchedule(){ if(!gh) return; clearTimeout(ghTimer); ghTimer=setTimeout(ghSync,1200); }
+function ghShow(){
+  $("ghPanel").hidden=false;
+  $("gh-repo").value=gh?gh.repo:""; $("gh-token").value=gh?gh.token:"";
+  $("ghState").textContent = gh ? "Verbunden mit "+gh.repo+". Alle Geräte mit diesem Zugang sehen dieselben Einträge." : "Nicht verbunden – die Einträge liegen nur auf diesem Gerät.";
+  ["ghSyncBtn","ghCode","ghOff"].forEach(id=>$(id).hidden=!gh);
+}
+function ghStart(){
+  gh=lsGet(GH_KEY,null); ghShow(); if(gh) ghSync();
+  $("ghConnect").addEventListener("click",async()=>{
+    let repo=$("gh-repo").value.trim(), token=$("gh-token").value.trim();
+    if(repo.includes("#")){ [repo,token]=repo.split("#").map(x=>x.trim()); }   // eingefügter Verbindungscode
+    repo=repo.replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/$/,"");
+    if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ toast("Repository bitte als benutzername/name angeben.",true,"ghToast"); return; }
+    if(!token){ toast("Bitte den Zugangsschlüssel eintragen.",true,"ghToast"); return; }
+    const prev=gh; gh={repo,token}; $("ghConnect").disabled=true; toast("Prüfe Zugang …",false,"ghToast");
+    try{ const r=await ghApi(""); if(!r.ok) throw new Error(ghErr(r));
+      const info=await r.json();
+      lsSet(GH_KEY,gh); ghShow();
+      toast(info.private===false?"Verbunden. Achtung: Dieses Repository ist öffentlich – die Einträge wären für alle lesbar!":"Verbunden.",info.private===false,"ghToast");
+      await ghSync();
+    }catch(e){ gh=prev; toast(e instanceof TypeError?"Keine Verbindung zu GitHub.":(e.message||"Verbindung fehlgeschlagen"),true,"ghToast"); }
+    finally{ $("ghConnect").disabled=false; }
+  });
+  $("ghSyncBtn").addEventListener("click",()=>ghSync());
+  $("ghCode").addEventListener("click",async()=>{ const code=gh.repo+"#"+gh.token;
+    try{ await navigator.clipboard.writeText(code); toast("Verbindungscode kopiert. Auf dem anderen Gerät ins Feld „Repository“ einfügen und „Verbinden“ tippen.",false,"ghToast"); }
+    catch(e){ $("gh-repo").value=code; $("gh-repo").select(); toast("Code steht im Feld „Repository“ – bitte von Hand kopieren.",false,"ghToast"); } });
+  $("ghOff").addEventListener("click",()=>{ gh=null; try{ localStorage.removeItem(GH_KEY); }catch(e){} ghShow(); setStatus("Auf diesem Gerät gespeichert"); toast("Getrennt. Die Einträge bleiben auf diesem Gerät und bei GitHub erhalten.",false,"ghToast"); });
+  document.addEventListener("visibilitychange",()=>{ if(gh && document.visibilityState==="visible" && Date.now()-ghLast>30000) ghSync(); });
+  window.addEventListener("online",()=>ghSync());
+}
+
+const withTimeout=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r("__timeout"),ms))]);
+let storeReadyResolve; const storeReady=new Promise(r=>storeReadyResolve=r);
+async function initStore(){
+  let db=null, uid=null, why="";
+  try{
+    if(window.claude && typeof claude.use==="function"){
+      db = await withTimeout(claude.use("db"),12000);
+      if(db==="__timeout"){ db=null; why="Speicher antwortet nicht"; }
+      else if(!db){ why="Speicher in dieser Ansicht nicht verfügbar"; }
+      if(db){
+        const user = await withTimeout(claude.use("user"),12000);
+        if(user && user!=="__timeout"){ const id=await withTimeout(user.id(),12000); uid = id==="__timeout"?null:id; }
+        if(!uid) why="Benutzerkennung nicht verfügbar";
+      }
+    } else why="außerhalb von Claude geöffnet";
+  }catch(e){ db=null; why=(e&&e.message)||"Fehler beim Verbinden"; }
+  let col=null;
+  if(db && uid){
+    try{ col = db.doc("data/users/"+uid+"/tracker").collection("eintraege"); }catch(e){ db=null; why="Speicherpfad ungültig: "+(e&&e.message||e); }
+  }
+  if(db && uid){
+    let loaded=false;
+    const timer=setTimeout(()=>{ if(!loaded) setStatus("Speicher antwortet nicht – bitte Seite neu laden.",true); },10000);
+    col.onSnapshot(snap=>{
+      loaded=true; clearTimeout(timer);
+      const next={}; snap.docs.forEach(d=>{ const v=d.data(); if(v&&v.datum) next[d.id]=v; });
+      entries=next; setStatus("Gespeichert in deinem Konto · privat"); renderAll();
+    }, err=>{ clearTimeout(timer); setStatus("Speicherfehler: "+(err&&err.message||"unbekannt"),true); });
+    const timed=(p,what)=>withTimeout(p,15000).then(r=>{ if(r==="__timeout") throw new Error(what+" dauert zu lange – bitte Verbindung prüfen"); return r; });
+    store = { save:(id,data)=>timed(col.doc(id).set(data),"Speichern"), remove:(id)=>timed(col.doc(id).delete(),"Löschen") };
+  } else {
+    store = localStore();
+    if(STANDALONE){ setStatus("Auf diesem Gerät gespeichert"); ghStart(); } else setStatus("Nur in diesem Browser gespeichert ("+why+")",true);
+    renderAll();
+  }
+  storeReadyResolve();
+}
+async function getStore(){ if(!store){ setStatus("Verbinde mit Speicher …"); await storeReady; } return store; }
+
+// ---------- form ----------
+const state = { temp:null, blutung:null, schmerzen:null };
+
+function buildChips(){
+  $("temps").innerHTML = TEMPS.map(t=>`<button type="button" class="chip" data-t="${t}" aria-pressed="false">${de(t)}</button>`).join("");
+  $("blutung").innerHTML = BLUTUNG.map(b=>`<button type="button" class="chip" data-b="${b}" aria-pressed="false">${b==="Schmier"?"Schmierblutung":b[0].toUpperCase()+b.slice(1)}</button>`).join("");
+  $("schmerzen").innerHTML = Array.from({length:11},(_,i)=>`<button type="button" class="chip${i>=2?" darkchip":""}" style="--lvl:${i}" data-s="${i}" aria-pressed="false">${i}</button>`).join("");
+}
+function syncChips(){
+  document.querySelectorAll("#temps .chip").forEach(c=>c.setAttribute("aria-pressed", state.temp!=null && Math.abs(+c.dataset.t-state.temp)<0.001));
+  document.querySelectorAll("#blutung .chip").forEach(c=>c.setAttribute("aria-pressed", c.dataset.b===state.blutung));
+  document.querySelectorAll("#schmerzen .chip").forEach(c=>c.setAttribute("aria-pressed", state.schmerzen!=null && +c.dataset.s===state.schmerzen));
+  const symList=$("f-symptome").value.split(",").map(x=>x.trim().symKey());
+  const symChipEls=[...document.querySelectorAll("#symChips .chip")];
+  symChipEls.forEach(c=>c.setAttribute("aria-pressed", symList.includes(c.dataset.sym.symKey())));
+  const symFull=symChipEls.filter(c=>c.getAttribute("aria-pressed")==="true").length>=4;
+  symChipEls.forEach(c=>c.classList.toggle("locked", symFull && c.getAttribute("aria-pressed")!=="true"));
+  if(!symFull && $("symHint")) $("symHint").textContent="";
+  $("tempShow").textContent = state.temp!=null ? de(state.temp,2).replace(/0$/,"")+" °C" : "–";
+}
+$("temps").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return; const t=+c.dataset.t; state.temp = state.temp===t?null:t; $("f-temp").value = state.temp!=null?de(state.temp,1):""; syncChips(); });
+$("f-temp").addEventListener("input",()=>{ const n=num($("f-temp").value); state.temp = (n==null||isNaN(n))?null:n; syncChips(); });
+// alte Einträge: "Kopfschmerzen" zählt als "Schmerzen", "Wassereinlagerung" als "Wasser"
+String.prototype.symKey=function(){ const k=this.toLowerCase(); return k==="kopfschmerzen"?"schmerzen":k==="wassereinlagerung"?"wasser":k; };
+const SYMPTOME=["Schmerzen","Brustspannen","Erschöpft","Wasser","Wut"];
+const SYM_COLOR={"Schmerzen":"--s-kopf","Brustspannen":"--s-brust","Erschöpft":"--s-ersch","Wasser":"--s-wasser","Wut":"--s-wut"};
+$("symChips").innerHTML = SYMPTOME.map(s=>`<button type="button" class="chip${s==="Brustspannen"?" lightsym":""}" style="--sc:var(${SYM_COLOR[s]})" data-sym="${s}" aria-pressed="false">${s}</button>`).join("");
+$("symChips").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return;
+  let parts=$("f-symptome").value.split(",").map(x=>x.trim()).filter(Boolean);
+  const s=c.dataset.sym, has=parts.some(p=>p.symKey()===s.symKey());
+  const chosen=SYMPTOME.filter(x=>parts.some(p=>p.symKey()===x.symKey())).length;
+  if(!has && chosen>=4){ $("symHint").textContent="Es können höchstens 4 der 5 Symptome ausgewählt werden. Zum Wechseln erst eines abwählen."; return; }
+  $("symHint").textContent="";
+  parts = has ? parts.filter(p=>p.symKey()!==s.symKey()) : [...parts,s];
+  $("f-symptome").value=parts.join(", "); syncChips(); });
+$("f-symptome").addEventListener("input",syncChips);
+$("blutung").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return; state.blutung = state.blutung===c.dataset.b?null:c.dataset.b; syncChips(); });
+$("schmerzen").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return; const s=+c.dataset.s; state.schmerzen = state.schmerzen===s?null:s; syncChips(); });
+
+function clearFields(){
+  ["f-zyklusnr","f-zyklustag","f-temp","f-sys","f-dia","f-puls","f-gewicht","f-symptome"].forEach(id=>$(id).value="");
+  state.temp=state.blutung=state.schmerzen=null; syncChips(); $("cycleHint").textContent="";
+}
+function fillFields(e){
+  $("f-zyklusnr").value=e.zyklusnr??""; $("f-zyklustag").value=e.zyklustag??"";
+  state.temp=e.temp??null; $("f-temp").value=e.temp!=null?de(e.temp,e.temp*100%10?2:1):"";
+  state.blutung=e.blutung??null; state.schmerzen=e.schmerzen??null;
+  $("f-sys").value=e.rrSys??""; $("f-dia").value=e.rrDia??""; $("f-puls").value=e.puls??"";
+  $("f-gewicht").value=e.gewicht!=null?de(e.gewicht,1):""; $("f-symptome").value=e.symptome??"";
+  syncChips();
+}
+function suggestCycle(date){
+  const prev = Object.keys(entries).filter(d=>d<date && entries[d].zyklustag!=null).sort().pop();
+  if(!prev){ $("cycleHint").textContent="Erster Eintrag? Dann „Neuer Zyklus“ tippen oder Tag eintragen."; return; }
+  const p=entries[prev], day=p.zyklustag+diffDays(prev,date);
+  $("f-zyklustag").value=day; if(p.zyklusnr!=null) $("f-zyklusnr").value=p.zyklusnr;
+  $("cycleHint").textContent=`Vorschlag aus dem Eintrag vom ${fmtShort(prev)} (Tag ${p.zyklustag}).`;
+}
+function onDateChange(){
+  const d=$("f-datum").value;
+  $("fields").disabled = !d;
+  $("formTitle").textContent = editingOriginal ? "Eintrag bearbeiten" : "1 · Datum wählen";
+  const note=$("existsNote");
+  if(!d){ note.hidden=true; return; }
+  if(editingOriginal){
+    note.hidden = d===editingOriginal || !entries[d];
+    note.textContent = `Achtung: Für den ${fmtDate(d)} gibt es bereits einen Eintrag. Beim Speichern wird er überschrieben.`;
+    return;
+  }
+  if(entries[d]){
+    note.hidden=false; note.textContent=`Für den ${fmtDate(d)} gibt es schon einen Eintrag. Er ist unten geladen und wird beim Speichern aktualisiert.`;
+    editingOriginal=d; fillFields(entries[d]); $("formTitle").textContent="Eintrag bearbeiten";
+  } else {
+    note.hidden=true; clearFields(); suggestCycle(d);
+  }
+}
+$("f-datum").addEventListener("change",onDateChange);
+$("newCycle").addEventListener("click",()=>{
+  const d=$("f-datum").value;
+  const prev=Object.keys(entries).filter(x=>x<d&&entries[x].zyklusnr!=null).sort().pop();
+  const cur=num($("f-zyklusnr").value);
+  const base = prev ? entries[prev].zyklusnr : (cur && !isNaN(cur) ? cur-1 : 0);
+  $("f-zyklusnr").value=(base||0)+1; $("f-zyklustag").value=1;
+  $("cycleHint").textContent="Neuer Zyklus beginnt mit Tag 1.";
+});
+
+function toast(msg,err,el="toast"){ const t=$(el); t.textContent=msg; t.classList.toggle("err",!!err); clearTimeout(t._h); t._h=setTimeout(()=>t.textContent="",4000); }
+
+$("form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const d=$("f-datum").value; if(!d){ toast("Bitte zuerst ein Datum wählen.",true); return; }
+  const v={ zyklusnr:num($("f-zyklusnr").value), zyklustag:num($("f-zyklustag").value), temp:state.temp,
+    rrSys:num($("f-sys").value), rrDia:num($("f-dia").value), puls:num($("f-puls").value), gewicht:num($("f-gewicht").value) };
+  const names={zyklusnr:"Zyklusnr.",zyklustag:"Zyklustag",temp:"Temperatur",rrSys:"Blutdruck",rrDia:"Blutdruck",puls:"Puls",gewicht:"Gewicht"};
+  for(const k in v){ if(Number.isNaN(v[k])){ toast(`${names[k]}: bitte eine Zahl eingeben.`,true); return; } }
+  if(v.temp!=null && (v.temp<34||v.temp>42)){ toast("Temperatur sieht unplausibel aus (34–42 °C).",true); return; }
+  const data={ datum:d, ...v, blutung:state.blutung, schmerzen:state.schmerzen, symptome:$("f-symptome").value.trim(), geaendert:new Date().toISOString() };
+  $("saveBtn").disabled=true;
+  try{
+    await (await getStore()).save(d,data);
+    if(editingOriginal && editingOriginal!==d) await (await getStore()).remove(editingOriginal);
+    entries[d]=data;
+    toast(`Gespeichert: ${fmtDate(d)}`);
+    editingOriginal=null; $("existsNote").hidden=true;
+    $("f-datum").value=addDays(d,1); clearFields(); onDateChange();
+  }catch(err){ toast("Nicht gespeichert: "+(err&&err.message||"Fehler"),true); }
+  finally{ $("saveBtn").disabled=false; }
+});
+$("resetBtn").addEventListener("click",()=>{ editingOriginal=null; clearFields(); $("existsNote").hidden=true; onDateChange(); });
+
+// ---------- tabs ----------
+function show(view){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.view===view));
+  ["erfassen","eintraege","report","jahr"].forEach(v=>$("view-"+v).hidden = v!==view);
+  if(view==="report") renderReport();
+  if(view==="jahr") renderYear();
+  if(view==="eintraege") renderList();
+}
+document.querySelector("nav.tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) show(b.dataset.view); });
+
+// ---------- list ----------
+function summary(e){
+  const p=[];
+  if(e.zyklustag!=null) p.push(`Tag <b>${e.zyklustag}</b>`);
+  if(e.temp!=null) p.push(`<b>${de(e.temp,2).replace(/0$/,"")} °C</b>`);
+  if(e.blutung) p.push(`Blutung <b>${esc(e.blutung)}</b>`);
+  if(e.schmerzen!=null) p.push(`Schmerz <b>${e.schmerzen}</b>`);
+  if(e.rrSys!=null||e.rrDia!=null) p.push(`RR <b>${e.rrSys??"–"}/${e.rrDia??"–"}</b>`);
+  if(e.puls!=null) p.push(`Puls <b>${e.puls}</b>`);
+  if(e.gewicht!=null) p.push(`<b>${de(e.gewicht)} kg</b>`);
+  if(e.symptome) p.push(esc(e.symptome));
+  return p.join(" · ") || "keine Werte";
+}
+let confirmDel=null;
+function renderList(){
+  const m=$("filterMonth").value;
+  const keys=Object.keys(entries).filter(d=>!m||d.startsWith(m)).sort().reverse();
+  $("countTitle").textContent = `${keys.length} ${keys.length===1?"Eintrag":"Einträge"}`;
+  if(!keys.length){ $("list").innerHTML=`<div class="empty">Noch keine Einträge${m?" in diesem Monat":""}.<br>Unter „Erfassen“ ein Datum wählen und die Werte eintragen.</div>`; return; }
+  $("list").innerHTML = keys.map(d=>`
+    <div class="entry">
+      <div class="d">${fmtShort(d)}<small>${WD[toD(d).getUTCDay()]} ${d.slice(0,4)}</small></div>
+      <div class="vals">${summary(entries[d])}</div>
+      <div class="actions">
+        <button class="btn small" data-edit="${d}">Bearbeiten</button>
+        <button class="btn small danger" data-del="${d}">${confirmDel===d?"Wirklich löschen?":"Löschen"}</button>
+      </div>
+    </div>`).join("");
+}
+$("filterMonth").addEventListener("input",renderList);
+$("list").addEventListener("click",async e=>{
+  const ed=e.target.closest("[data-edit]"), dl=e.target.closest("[data-del]");
+  if(ed){ const d=ed.dataset.edit; editingOriginal=d; $("f-datum").value=d; clearFields(); fillFields(entries[d]); onDateChange(); show("erfassen"); window.scrollTo(0,0); }
+  if(dl){ const d=dl.dataset.del;
+    if(confirmDel!==d){ confirmDel=d; renderList(); setTimeout(()=>{ if(confirmDel===d){ confirmDel=null; renderList(); } },4000); return; }
+    confirmDel=null; try{ await (await getStore()).remove(d); delete entries[d]; renderList(); }catch(err){ setStatus("Löschen fehlgeschlagen",true); } }
+});
+
+// ---------- report ----------
+function rangeRows(){
+  let a=$("r-von").value, b=$("r-bis").value;
+  if(!a||!b) return null;
+  if(a>b) [a,b]=[b,a];
+  const days=[]; for(let d=a; d<=b && days.length<400; d=addDays(d,1)) days.push(d);
+  return {a,b,days};
+}
+function chartSVG(days, forPrint){
+  const pts=days.map((d,i)=>({i,d,t:entries[d]?.temp})).filter(p=>p.t!=null);
+  const vals=pts.map(p=>p.t);
+  let lo=Math.min(35.5,...vals), hi=Math.max(37.0,...vals);
+  lo=Math.floor(lo*10)/10; hi=Math.ceil(hi*10)/10;
+  const W=Math.max(560, days.length*26+60), H=230, L=44, R=12, T=12, B=36;
+  const x=i=> L + (days.length===1? (W-L-R)/2 : i*(W-L-R)/(days.length-1));
+  const y=t=> T + (hi-t)/(hi-lo)*(H-T-B);
+  const c = forPrint ? {grid:"#d9d6df",txt:"#555",line:"#2f5d8a",dot:"#2f5d8a",bg:"#fff",bl:"#8c2a5a"} : {grid:"var(--line)",txt:"var(--muted)",line:"var(--temp)",dot:"var(--temp)",bg:"var(--panel)",bl:"var(--accent)"};
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Temperaturkurve" xmlns="http://www.w3.org/2000/svg" style="min-width:${Math.min(W,900)}px">`;
+  for(let t=lo; t<=hi+1e-9; t=+(t+0.1).toFixed(1)){
+    const major=Math.abs(t*2-Math.round(t*2))<1e-6;
+    s+=`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="${c.grid}" stroke-width="${major?1:0.5}"/>`;
+    if(major) s+=`<text x="${L-6}" y="${y(t)+4}" font-size="11" text-anchor="end" fill="${c.txt}">${de(t)}</text>`;
+  }
+  const step=Math.ceil(days.length/31);
+  days.forEach((d,i)=>{
+    if(entries[d]?.blutung && entries[d].blutung!=="keine") s+=`<rect x="${x(i)-5}" y="${H-B+4}" width="10" height="6" rx="2" fill="${c.bl}"/>`;
+    if(i%step===0) s+=`<text x="${x(i)}" y="${H-8}" font-size="10" text-anchor="middle" fill="${c.txt}">${+d.slice(8,10)}</text>`;
+  });
+  if(pts.length>1) s+=`<polyline fill="none" stroke="${c.line}" stroke-width="2" points="${pts.map(p=>x(p.i)+","+y(p.t)).join(" ")}"/>`;
+  pts.forEach(p=> s+=`<circle cx="${x(p.i)}" cy="${y(p.t)}" r="3.6" fill="${c.bg}" stroke="${c.dot}" stroke-width="2"/>`);
+  return s+"</svg>";
+}
+function stats(days){
+  const es=days.map(d=>entries[d]).filter(Boolean);
+  const avg=k=>{ const v=es.map(e=>e[k]).filter(v=>v!=null); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; };
+  const g=es.map(e=>e.gewicht).filter(v=>v!=null);
+  return { n:es.length, total:days.length, temp:avg("temp"), puls:avg("puls"), sys:avg("rrSys"), dia:avg("rrDia"),
+    gmin:g.length?Math.min(...g):null, gmax:g.length?Math.max(...g):null, blut:es.filter(e=>e.blutung&&e.blutung!=="keine").length };
+}
+const HEAD=["Tag","Datum","Temp. °C","Blutung","Schmerzen","Blutdruck","Puls","Gewicht kg","Symptome"];
+function rowCells(d){
+  const e=entries[d]||{};
+  return [e.zyklustag??"", fmtDate(d), e.temp!=null?de(e.temp,2).replace(/0$/,""):"", e.blutung==="Schmier"?"Schmierblutung":(e.blutung??""), e.schmerzen??"",
+    (e.rrSys!=null||e.rrDia!=null)?`${e.rrSys??"–"}/${e.rrDia??"–"}`:"", e.puls??"", e.gewicht!=null?de(e.gewicht):"", e.symptome??""];
+}
+function tableHTML(days){
+  return `<table><thead><tr>${HEAD.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${
+    days.map(d=>{ const c=rowCells(d); return `<tr class="${entries[d]?"":"missing"}">${c.map((v,i)=>`<td${i===8?' class="sym"':""}>${esc(v)}</td>`).join("")}</tr>`; }).join("")
+  }</tbody></table>`;
+}
+function statsHTML(st){
+  const it=[["Einträge",`${st.n} von ${st.total} Tagen`],["Ø Temperatur",st.temp!=null?de(st.temp,2)+" °C":"–"],["Ø Blutdruck",st.sys!=null?`${Math.round(st.sys)}/${st.dia!=null?Math.round(st.dia):"–"}`:"–"],
+    ["Ø Puls",st.puls!=null?Math.round(st.puls)+" /min":"–"],["Gewicht",st.gmin!=null?(st.gmin===st.gmax?de(st.gmin):de(st.gmin)+"–"+de(st.gmax))+" kg":"–"],["Blutungstage",String(st.blut)]];
+  return it.map(([k,v])=>`<div class="stat"><div class="label">${k}</div><div class="v">${v}</div></div>`).join("");
+}
+function renderReport(){
+  const r=rangeRows();
+  if(!r){ $("report").innerHTML=`<div class="empty">Zeitraum wählen.</div>`; return; }
+  const st=stats(r.days);
+  $("report").innerHTML = `
+    <div class="panel">
+      <h2>${fmtDate(r.a)} – ${fmtDate(r.b)}</h2>
+      <div class="stats">${statsHTML(st)}</div>
+    </div>
+    <div class="panel chart"><span class="label">Temperaturkurve</span><div class="tablewrap" style="border:0">${chartSVG(r.days,false)}</div></div>
+    <div class="tablewrap">${tableHTML(r.days)}</div>`;
+}
+$("r-von").addEventListener("change",renderReport);
+$("r-bis").addEventListener("change",renderReport);
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{
+  let base=($("r-von").value||today()).slice(0,8);
+  const p=b.dataset.preset;
+  if(p==="prev"){ const d=toD(base+"01"); d.setUTCMonth(d.getUTCMonth()-1); base=toS(d).slice(0,8); }
+  const end=lastOfMonth(base+"01");
+  const map={"1-10":["01","10"],"11-20":["11","20"],"21-end":["21",end.slice(8)],"month":["01",end.slice(8)],"prev":["01",end.slice(8)]};
+  $("r-von").value=base+map[p][0]; $("r-bis").value=base+map[p][1]; renderReport();
+}));
+
+function printableHTML(r){
+  const st=stats(r.days);
+  const zy=[...new Set(r.days.map(d=>entries[d]?.zyklusnr).filter(v=>v!=null))].join(", ");
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Monatstracker ${fmtShort(r.a)}–${fmtShort(r.b)}${r.b.slice(0,4)}</title>
+<style>@page{size:A4 landscape;margin:12mm}body{font-family:Segoe UI,Arial,sans-serif;color:#222;margin:20px;font-size:12px}
+h1{font-size:20px;margin:0 0 2px}.meta{color:#555;margin-bottom:12px}.stats{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0 14px}
+.stats div{border:1px solid #ccc;border-radius:6px;padding:6px 10px}.stats b{display:block;font-size:14px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}
+th{background:#eee;font-size:11px}tr.missing td{color:#999}svg{width:100%;height:auto;margin-bottom:12px}
+.bar{margin-bottom:14px}button{font-size:14px;padding:8px 16px;cursor:pointer}@media print{.bar{display:none}tr{page-break-inside:avoid}}</style></head><body>
+<div class="bar"><button onclick="window.print()">Drucken</button></div>
+<h1>Monatstracker</h1><div class="meta">Zeitraum: ${fmtDate(r.a)} – ${fmtDate(r.b)}${zy?" · Zyklusnr.: "+esc(zy):""} · erstellt am ${fmtDate(today())}</div>
+<div class="stats">${statsHTML(st).replace(/<div class="stat"><div class="label">(.*?)<\/div><div class="v">(.*?)<\/div><\/div>/g,"<div>$1<b>$2</b></div>")}</div>
+${chartSVG(r.days,true).replace(/ style="min-width:\d+px"/,"")}
+${tableHTML(r.days)}
+</body></html>`;
+}
+function csvText(r){
+  const q=v=>{ const s=String(v??""); return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const head=["Tag","Datum","Temperatur","Blutung","Schmerzen","Blutdruck sys","Blutdruck dia","Puls","Gewicht","Symptome","Zyklusnr."];
+  const lines=r.days.filter(d=>entries[d]).map(d=>{ const e=entries[d];
+    return [e.zyklustag, d.split("-").reverse().join("."), e.temp!=null?de(e.temp,2):"", e.blutung, e.schmerzen, e.rrSys, e.rrDia, e.puls, e.gewicht!=null?de(e.gewicht):"", e.symptome, e.zyklusnr].map(q).join(";"); });
+  return "﻿"+[head.join(";"),...lines].join("\r\n");
+}
+async function download(kind){
+  const r=rangeRows(); if(!r){ toast("Bitte erst einen Zeitraum wählen.",true,"dlToast"); return; }
+  const dl = await getDl();
+  if(!dl){ toast("Download ist in dieser Ansicht nicht verfügbar.",true,"dlToast"); return; }
+  const name=`Monatstracker_${r.a}_bis_${r.b}.${kind}`;
+  try{ await dl.save({filename:name, data: kind==="html"?printableHTML(r):csvText(r)}); toast("Datei gespeichert: "+name,false,"dlToast"); }
+  catch(e){ if(e&&e.code==="declined") return; toast("Download nicht möglich: "+(e&&e.message||e&&e.code||"Fehler"),true,"dlToast"); }
+}
+$("dlHtml").addEventListener("click",()=>download("html"));
+$("dlCsv").addEventListener("click",()=>download("csv"));
+
+// ---------- Jahresreport ----------
+const MONATE=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const BL_LEVEL={"Schmier":"l1","schwach":"l2","mittel":"l3","stark":"bl"};
+let year=+today().slice(0,4);
+function yearData(y){
+  // Einträge mit Zyklusnr. und Tag nach Zyklus gruppieren (gleiche Nr. mit >60 Tagen Lücke = neuer Zyklus)
+  const byNr={}; let skipped=0;
+  Object.keys(entries).sort().forEach(d=>{ const e=entries[d];
+    if(e.zyklusnr==null||e.zyklustag==null||e.zyklustag<1){ if(d.startsWith(y+"-")) skipped++; return; }
+    (byNr[e.zyklusnr]=byNr[e.zyklusnr]||[]).push(d); });
+  const cycles=[];
+  Object.keys(byNr).forEach(nr=>{ let cur=null;
+    byNr[nr].forEach(d=>{ if(!cur || diffDays(cur.last,d)>60){ cur={nr:+nr,days:{},first:d,last:d}; cycles.push(cur); }
+      cur.days[entries[d].zyklustag]=d; cur.last=d; }); });
+  const rows=cycles.filter(c=>Object.values(c.days).some(d=>d.startsWith(y+"-"))).map(c=>{
+    const t0=entries[c.first].zyklustag, start=addDays(c.first,-(t0-1));
+    const maxDay=Math.max(...Object.keys(c.days).map(Number));
+    const n=Object.values(c.days).filter(d=>{ const bl=entries[d].blutung; return bl&&bl!=="keine"; }).length;
+    return {...c,start,maxDay,n};
+  }).sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:a.nr-b.nr);
+  return {rows,skipped};
+}
+const BL_HEX={"Schmier":"#f4b6b6","schwach":"#e26a6a","mittel":"#c62828","stark":"#7a0000"};
+const SYM_HEX={"Schmerzen":"#7b3fbf","Brustspannen":"#d9a400","Erschöpft":"#2e8b4e","Wasser":"#2f6fd0","Wut":"#e0407f"};
+const painHex=n=>{ const f=1-Math.max(0,Math.min(10,n))/10; const h=v=>Math.round(v*f).toString(16).padStart(2,"0"); return "#"+h(0x8e)+h(0x8e)+h(0x94); };
+function entrySyms(e){ const parts=(e.symptome||"").split(",").map(x=>x.trim().symKey()); return SYMPTOME.filter(x=>parts.includes(x.symKey())).slice(0,4); }
+function cellBox(e, print){
+  const bl = e.blutung && e.blutung!=="keine" ? (BL_HEX[e.blutung]||BL_HEX.stark) : null;
+  const pn = e.schmerzen!=null ? painHex(e.schmerzen) : null;
+  const sy = entrySyms(e).map(x=> print ? SYM_HEX[x] : `var(${SYM_COLOR[x]})`);
+  const box=(c,w)=>`<i${w?' class="w"':""}${c?` style="background:${c}"`:""}></i>`;
+  return `<div class="cb">${box(bl,1)}${box(pn,1)}${[0,1,2,3].map(i=>box(sy[i])).join("")}</div>`;
+}
+function legendHTML(){
+  const g=cols=>`<span class="grad">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</span>`;
+  return `<span>${g(Object.values(BL_HEX))}Blutung: leicht → stark</span><span>${g([0,2,4,6,8,10].map(painHex))}Schmerzen: 0 → 10</span>`
+    + SYMPTOME.map(x=>`<span><i style="background:${SYM_HEX[x]}"></i>${x}</span>`).join("");
+}
+function yearTable(y, print){
+  const {rows,skipped}=yearData(y), t=today();
+  const cols=Math.min(60,Math.max(31,...rows.map(r=>r.maxDay)));
+  const P={bl:"#c62828",l1:"#f2bcbc",l2:"#e48585",l3:"#d24a4a",has:"#ececec"};
+  let h=`<table class="year"><thead><tr><th class="m">Zyklus</th>`;
+  for(let d=1; d<=cols; d++) h+=`<th>${d}</th>`;
+  h+=`<th>Tage</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    h+=`<tr><th class="m">Zyklus ${r.nr}<small> ab ${fmtShort(r.start)}</small></th>`;
+    for(let d=1; d<=cols; d++){
+      const key=r.days[d], e=key?entries[key]:null, date=key||addDays(r.start,d-1);
+      const bleed = e && e.blutung && e.blutung!=="keine";
+      const sy = e ? entrySyms(e) : [];
+      const tip=`Tag ${d} · ${fmtDate(date)}`+(e ? ` · Blutung: ${bleed?(e.blutung==="Schmier"?"Schmierblutung":e.blutung):"keine"}`+(e.schmerzen!=null?` · Schmerzen: ${e.schmerzen}`:"")+(sy.length?` · ${sy.join(", ")}`:"") : "");
+      const inner = e ? cellBox(e,print) : "";
+      if(print) h+=`<td class="c${e?" has":""}" title="${esc(tip)}">${inner}</td>`;
+      else h+=`<td class="c${e?" has":""}${date===t?" today":""}" title="${esc(tip)}" data-day="${date}" data-nr="${r.nr}" data-tag="${d}">${inner}</td>`;
+    }
+    h+=`<td class="sum">${r.n||""}</td></tr>`;
+  });
+  if(!rows.length) h+=`<tr><td colspan="${cols+2}" style="padding:22px 12px;white-space:normal">Für ${y} sind noch keine Zyklen gespeichert. Beim Erfassen „Zyklusnr.“ und „Tag“ eintragen, dann erscheint hier pro Zyklus eine Zeile.</td></tr>`;
+  return {html:h+`</tbody></table>`, total:rows.reduce((a,r)=>a+r.n,0), count:rows.length, skipped};
+}
+function renderYear(){
+  $("yLabel").textContent=year;
+  const r=yearTable(year,false);
+  $("yearGrid").innerHTML=r.html;
+  $("yLegend").innerHTML=legendHTML();
+  $("ySummary").textContent = (r.count ? `${r.count} ${r.count===1?"Zyklus":"Zyklen"} · ${r.total} Blutungstage` : "Keine Zyklen in diesem Jahr.")
+    + (r.skipped ? ` · ${r.skipped} ${r.skipped===1?"Eintrag":"Einträge"} ohne Zyklusnr./Tag nicht enthalten` : "");
+}
+$("yPrev").addEventListener("click",()=>{ year--; renderYear(); });
+$("yNext").addEventListener("click",()=>{ year++; renderYear(); });
+$("yearGrid").addEventListener("click",e=>{ const c=e.target.closest("[data-day]"); if(!c) return;
+  const d=c.dataset.day; editingOriginal=entries[d]?d:null; $("f-datum").value=d; clearFields(); if(entries[d]) fillFields(entries[d]); onDateChange();
+  if(!entries[d]){ $("f-zyklusnr").value=c.dataset.nr; $("f-zyklustag").value=c.dataset.tag; $("cycleHint").textContent="Zyklus und Tag aus dem Jahresreport übernommen."; }
+  show("erfassen"); window.scrollTo(0,0); });
+$("dlYear").addEventListener("click",async()=>{
+  const dl = await getDl();
+  if(!dl){ toast("Download ist in dieser Ansicht nicht verfügbar.",true,"yToast"); return; }
+  const r=yearTable(year,true);
+  const html=`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Jahresreport ${year}</title>
+<style>@page{size:A4 landscape;margin:10mm}body{font-family:Segoe UI,Arial,sans-serif;color:#222;margin:20px;font-size:11px}h1{font-size:20px;margin:0 0 4px}.meta{color:#555;margin-bottom:12px}
+table{border-collapse:collapse;width:100%;table-layout:fixed;-webkit-print-color-adjust:exact;print-color-adjust:exact}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{border:1px solid #999;text-align:center;padding:0}td.c{height:60px;padding:2px;vertical-align:top}td.c.has{background:#f1f1f1}.cb{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:15px 15px 10px 10px;gap:2px}.cb i{display:block;border:1px solid #bbb;box-sizing:border-box}.cb i.w{grid-column:1/-1}.grad{display:inline-flex;margin-right:4px;vertical-align:-2px}.grad i{margin:0!important;border:0!important}th{background:#eee;font-size:10px}
+th.m small{font-weight:normal;color:#666}th.m{width:112px;text-align:left;padding-left:6px;font-size:11px;background:#fff}td.sum{font-weight:bold;width:34px}.legend{margin-top:10px;display:flex;gap:16px}.legend i{display:inline-block;width:12px;height:12px;border:1px solid #999;margin-right:4px;vertical-align:-2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bar{margin-bottom:14px}button{font-size:14px;padding:8px 16px;cursor:pointer}@media print{.bar{display:none}}</style></head><body>
+<div class="bar"><button onclick="window.print()">Drucken</button></div>
+<h1>Jahresreport ${year}</h1><div class="meta">Zyklen: ${r.count} · Blutungstage: ${r.total} · erstellt am ${fmtDate(today())}</div>
+${r.html.replace(/ class="year"/,"")}
+<div class="legend" style="flex-wrap:wrap">${legendHTML()}</div><p>Jedes Kästchen ist ein Zyklustag: oben Blutung, darunter Schmerzen, unten die gewählten Symptome.</p>
+</body></html>`;
+  const name=`Jahresreport_${year}.html`;
+  try{ await dl.save({filename:name,data:html}); toast("Datei gespeichert: "+name,false,"yToast"); }
+  catch(e){ if(e&&e.code==="declined") return; toast("Download nicht möglich: "+(e&&e.message||e&&e.code||"Fehler"),true,"yToast"); }
+});
+
+// ---------- Datensicherung ----------
+const backupText=()=>JSON.stringify({app:"monatstracker",version:1,erstellt:new Date().toISOString(),eintraege:Object.keys(entries).sort().map(d=>entries[d])});
+$("bkCopy").addEventListener("click",async()=>{
+  const t=backupText(); $("bkText").value=t;
+  try{ await navigator.clipboard.writeText(t); toast(`${Object.keys(entries).length} Einträge kopiert.`,false,"bkToast"); }
+  catch(e){ $("bkText").focus(); $("bkText").select(); toast("Text ist unten markiert – bitte von Hand kopieren.",false,"bkToast"); }
+});
+$("bkFile").addEventListener("click",async()=>{
+  const dl=await getDl(); if(!dl){ toast("Datei-Download hier nicht verfügbar – bitte „Sicherung kopieren“ nutzen.",true,"bkToast"); return; }
+  const name=`Monatstracker_Sicherung_${today()}.json`;
+  try{ await dl.save({filename:name,data:backupText()}); toast("Datei gespeichert: "+name,false,"bkToast"); }
+  catch(e){ if(e&&e.code==="declined") return; toast("Download nicht möglich – bitte „Sicherung kopieren“ nutzen.",true,"bkToast"); }
+});
+$("bkImport").addEventListener("click",async()=>{
+  let list;
+  try{ const j=JSON.parse($("bkText").value); list=Array.isArray(j)?j:j.eintraege; if(!Array.isArray(list)) throw 0; }
+  catch(e){ toast("Das ist kein gültiger Sicherungstext.",true,"bkToast"); return; }
+  list=list.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.datum||""));
+  if(!list.length){ toast("Die Sicherung enthält keine Einträge.",true,"bkToast"); return; }
+  $("bkImport").disabled=true;
+  try{ const st=await getStore(); let n=0;
+    const now=new Date().toISOString();
+    for(const e0 of list){ const e={...e0,geaendert:now}; await st.save(e.datum,e); entries[e.datum]=e; n++; toast(`Spiele ein … ${n}/${list.length}`,false,"bkToast"); }
+    $("bkText").value=""; renderList(); toast(`${n} Einträge eingespielt. Vorhandene Tage wurden überschrieben.`,false,"bkToast"); }
+  catch(e){ toast("Einspielen abgebrochen: "+(e&&e.message||"Fehler"),true,"bkToast"); }
+  finally{ $("bkImport").disabled=false; }
+});
+
+function renderAll(){
+  if(!$("view-eintraege").hidden) renderList();
+  if(!$("view-report").hidden) renderReport();
+  if(!$("view-jahr").hidden) renderYear();
+  if(!editingOriginal && $("f-datum").value && entries[$("f-datum").value] && $("existsNote").hidden) onDateChange();
+}
+
+// ---------- start ----------
+buildChips(); syncChips();
+$("f-datum").value=today(); onDateChange();
+$("filterMonth").value=today().slice(0,7);
+const t=today(); $("r-von").value=t.slice(0,8)+"01"; $("r-bis").value=t.slice(0,8)+(+t.slice(8)<=10?"10":+t.slice(8)<=20?"20":lastOfMonth(t).slice(8));
+initStore().catch(e=>{ if(!store){ store=localStore(); setStatus("Nur in diesem Browser gespeichert ("+((e&&e.message)||"Fehler")+")",true); renderAll(); } storeReadyResolve(); });
+})();
+</script>
+
+</body></html>
