@@ -102,12 +102,12 @@ tr.missing td{color:var(--muted)}
 .stat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .stat .v{font-family:var(--display);font-size:1.25rem;font-weight:600;font-variant-numeric:tabular-nums}
 .chart svg{width:100%;height:auto;display:block}
-.yearbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.yearbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
 .yearbar .yr{font-family:var(--display);font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums;min-width:4ch;text-align:center}
 table.year{width:auto;font-size:.75rem}
 table.year th,table.year td{padding:0;border:1px solid var(--line);text-align:center;white-space:nowrap}
 table.year thead th{padding:4px 0;min-width:32px;letter-spacing:0;text-transform:none;font-size:.7rem}
-table.year th.m{text-align:left;padding:0 10px;min-width:92px;font-size:.78rem;text-transform:none;letter-spacing:0;color:var(--ink);background:var(--panel);position:sticky;left:0;z-index:1}
+table.year th.m{text-align:left;padding:0 10px;min-width:92px;white-space:nowrap;font-size:.78rem;text-transform:none;letter-spacing:0;color:var(--ink);background:var(--panel);position:sticky;left:0;z-index:1}
 table.year td.c{width:32px;min-width:32px;height:64px;padding:2px;vertical-align:top;cursor:pointer}
 table.year td.c.has{background:var(--hasdata)}
 .cb{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:16px 16px 11px 11px;gap:2px}
@@ -276,9 +276,8 @@ table.year td.sum{padding:0 8px;font-weight:700;font-variant-numeric:tabular-num
   <section class="view" id="view-jahr" hidden>
     <div class="panel">
       <div class="yearbar">
-        <button type="button" class="btn small" id="yPrev" aria-label="Vorjahr">‹</button>
-        <span class="yr" id="yLabel"></span>
-        <button type="button" class="btn small" id="yNext" aria-label="Folgejahr">›</button>
+        <div class="field" style="flex:0 0 150px"><label for="ySelect">Jahr</label><select id="ySelect" class="datebig"></select></div>
+        <button type="button" class="chip" id="yAll" aria-pressed="false">Alle Werte</button>
         <span class="hint" id="ySummary"></span>
       </div>
       <div class="legend" id="yLegend"></div>
@@ -747,18 +746,20 @@ $("dlCsv").addEventListener("click",()=>download("csv"));
 // ---------- Jahresreport ----------
 const MONATE=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const BL_LEVEL={"Schmier":"l1","schwach":"l2","mittel":"l3","stark":"bl"};
-let year=+today().slice(0,4);
+let year=+today().slice(0,4);   // Zahl oder "alle"
+const inYear=(d,y)=> y==="alle" || d.startsWith(y+"-");
+const yearTitle=()=> year==="alle" ? "alle Jahre" : String(year);
 function yearData(y){
   // Einträge mit Zyklusnr. und Tag nach Zyklus gruppieren (gleiche Nr. mit >60 Tagen Lücke = neuer Zyklus)
   const byNr={}; let skipped=0;
   Object.keys(entries).sort().forEach(d=>{ const e=entries[d];
-    if(e.zyklusnr==null||e.zyklustag==null||e.zyklustag<1){ if(d.startsWith(y+"-")) skipped++; return; }
+    if(e.zyklusnr==null||e.zyklustag==null||e.zyklustag<1){ if(inYear(d,y)) skipped++; return; }
     (byNr[e.zyklusnr]=byNr[e.zyklusnr]||[]).push(d); });
   const cycles=[];
   Object.keys(byNr).forEach(nr=>{ let cur=null;
     byNr[nr].forEach(d=>{ if(!cur || diffDays(cur.last,d)>60){ cur={nr:+nr,days:{},first:d,last:d}; cycles.push(cur); }
       cur.days[entries[d].zyklustag]=d; cur.last=d; }); });
-  const rows=cycles.filter(c=>Object.values(c.days).some(d=>d.startsWith(y+"-"))).map(c=>{
+  const rows=cycles.filter(c=>Object.values(c.days).some(d=>inYear(d,y))).map(c=>{
     const t0=entries[c.first].zyklustag, start=addDays(c.first,-(t0-1));
     const maxDay=Math.max(...Object.keys(c.days).map(Number));
     const n=Object.values(c.days).filter(d=>{ const bl=entries[d].blutung; return bl&&bl!=="keine"; }).length;
@@ -790,7 +791,7 @@ function yearTable(y, print){
   for(let d=1; d<=cols; d++) h+=`<th>${d}</th>`;
   h+=`<th>Tage</th></tr></thead><tbody>`;
   rows.forEach(r=>{
-    h+=`<tr><th class="m">Zyklus ${r.nr}<small> ab ${fmtShort(r.start)}</small></th>`;
+    h+=`<tr><th class="m">Zyklus ${r.nr}<small> ab ${y==="alle"?r.start.split("-").reverse().join("."):fmtShort(r.start)}</small></th>`;
     for(let d=1; d<=cols; d++){
       const key=r.days[d], e=key?entries[key]:null, date=key||addDays(r.start,d-1);
       const bleed = e && e.blutung && e.blutung!=="keine";
@@ -802,19 +803,25 @@ function yearTable(y, print){
     }
     h+=`<td class="sum">${r.n||""}</td></tr>`;
   });
-  if(!rows.length) h+=`<tr><td colspan="${cols+2}" style="padding:22px 12px;white-space:normal">Für ${y} sind noch keine Zyklen gespeichert. Beim Erfassen „Zyklusnr.“ und „Tag“ eintragen, dann erscheint hier pro Zyklus eine Zeile.</td></tr>`;
+  if(!rows.length) h+=`<tr><td colspan="${cols+2}" style="padding:22px 12px;white-space:normal">${y==="alle"?"Es":"Für "+y} sind noch keine Zyklen gespeichert. Beim Erfassen „Zyklusnr.“ und „Tag“ eintragen, dann erscheint hier pro Zyklus eine Zeile.</td></tr>`;
   return {html:h+`</tbody></table>`, total:rows.reduce((a,r)=>a+r.n,0), count:rows.length, skipped};
 }
 function renderYear(){
-  $("yLabel").textContent=year;
+  const years=[...new Set(Object.keys(entries).map(d=>+d.slice(0,4)))].sort((a,b)=>b-a);
+  if(year!=="alle" && !years.includes(year)) year = years.length ? (years.includes(+today().slice(0,4))?+today().slice(0,4):years[0]) : +today().slice(0,4);
+  const opts = years.length ? years : [year];
+  $("ySelect").innerHTML = opts.map(y=>`<option value="${y}">${y}</option>`).join("") + `<option value="alle">Alle Jahre</option>`;
+  $("ySelect").value=String(year);
+  $("yAll").setAttribute("aria-pressed", year==="alle");
   const r=yearTable(year,false);
   $("yearGrid").innerHTML=r.html;
   $("yLegend").innerHTML=legendHTML();
-  $("ySummary").textContent = (r.count ? `${r.count} ${r.count===1?"Zyklus":"Zyklen"} · ${r.total} Blutungstage` : "Keine Zyklen in diesem Jahr.")
+  $("ySummary").textContent = (r.count ? `${r.count} ${r.count===1?"Zyklus":"Zyklen"} · ${r.total} Blutungstage` : (year==="alle"?"Noch keine Zyklen erfasst.":"Keine Zyklen in diesem Jahr."))
     + (r.skipped ? ` · ${r.skipped} ${r.skipped===1?"Eintrag":"Einträge"} ohne Zyklusnr./Tag nicht enthalten` : "");
 }
-$("yPrev").addEventListener("click",()=>{ year--; renderYear(); });
-$("yNext").addEventListener("click",()=>{ year++; renderYear(); });
+let lastYear=year;
+$("ySelect").addEventListener("change",()=>{ const v=$("ySelect").value; year = v==="alle" ? "alle" : +v; if(year!=="alle") lastYear=year; renderYear(); });
+$("yAll").addEventListener("click",()=>{ if(year==="alle") year=lastYear; else { lastYear=year; year="alle"; } renderYear(); });
 $("yearGrid").addEventListener("click",e=>{ const c=e.target.closest("[data-day]"); if(!c) return;
   const d=c.dataset.day; editingOriginal=entries[d]?d:null; $("f-datum").value=d; clearFields(); if(entries[d]) fillFields(entries[d]); onDateChange();
   if(!entries[d]){ $("f-zyklusnr").value=c.dataset.nr; $("f-zyklustag").value=c.dataset.tag; $("cycleHint").textContent="Zyklus und Tag aus dem Jahresreport übernommen."; }
@@ -823,17 +830,17 @@ $("dlYear").addEventListener("click",async()=>{
   const dl = await getDl();
   if(!dl){ toast("Download ist in dieser Ansicht nicht verfügbar.",true,"yToast"); return; }
   const r=yearTable(year,true);
-  const html=`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Jahresreport ${year}</title>
+  const html=`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Jahresreport ${yearTitle()}</title>
 <style>@page{size:A4 landscape;margin:10mm}body{font-family:Segoe UI,Arial,sans-serif;color:#222;margin:20px;font-size:11px}h1{font-size:20px;margin:0 0 4px}.meta{color:#555;margin-bottom:12px}
 table{border-collapse:collapse;width:100%;table-layout:fixed;-webkit-print-color-adjust:exact;print-color-adjust:exact}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{border:1px solid #999;text-align:center;padding:0}td.c{height:60px;padding:2px;vertical-align:top}td.c.has{background:#f1f1f1}.cb{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:15px 15px 10px 10px;gap:2px}.cb i{display:block;border:1px solid #bbb;box-sizing:border-box}.cb i.w{grid-column:1/-1}.grad{display:inline-flex;margin-right:4px;vertical-align:-2px}.grad i{margin:0!important;border:0!important}th{background:#eee;font-size:10px}
-th.m small{font-weight:normal;color:#666}th.m{width:112px;text-align:left;padding-left:6px;font-size:11px;background:#fff}td.sum{font-weight:bold;width:34px}.legend{margin-top:10px;display:flex;gap:16px}.legend i{display:inline-block;width:12px;height:12px;border:1px solid #999;margin-right:4px;vertical-align:-2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+th.m small{font-weight:normal;color:#666}th.m{width:${year==="alle"?140:112}px;text-align:left;padding-left:6px;font-size:11px;background:#fff}td.sum{font-weight:bold;width:34px}.legend{margin-top:10px;display:flex;gap:16px}.legend i{display:inline-block;width:12px;height:12px;border:1px solid #999;margin-right:4px;vertical-align:-2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .bar{margin-bottom:14px}button{font-size:14px;padding:8px 16px;cursor:pointer}@media print{.bar{display:none}}</style></head><body>
 <div class="bar"><button onclick="window.print()">Drucken</button></div>
-<h1>Jahresreport ${year}</h1><div class="meta">Zyklen: ${r.count} · Blutungstage: ${r.total} · erstellt am ${fmtDate(today())}</div>
+<h1>Jahresreport ${yearTitle()}</h1><div class="meta">Zyklen: ${r.count} · Blutungstage: ${r.total} · erstellt am ${fmtDate(today())}</div>
 ${r.html.replace(/ class="year"/,"")}
 <div class="legend" style="flex-wrap:wrap">${legendHTML()}</div><p>Jedes Kästchen ist ein Zyklustag: oben Blutung, darunter Schmerzen, unten die gewählten Symptome.</p>
 </body></html>`;
-  const name=`Jahresreport_${year}.html`;
+  const name=`Jahresreport_${year==="alle"?"alle_Jahre":year}.html`;
   try{ await dl.save({filename:name,data:html}); toast("Datei gespeichert: "+name,false,"yToast"); }
   catch(e){ if(e&&e.code==="declined") return; toast("Download nicht möglich: "+(e&&e.message||e&&e.code||"Fehler"),true,"yToast"); }
 });
